@@ -115,8 +115,8 @@ const index = async (req, res, next) => {
             
       
         }
-        
-        let count = await Product.find().countDocuments();
+        const count = await Product.countDocuments(criteria);
+        // let count = await Product.find().countDocuments();
         const products = await Product.find(criteria)
         .skip(parseInt(skip))
         .limit(parseInt(limit))
@@ -130,6 +130,74 @@ const index = async (req, res, next) => {
         next(error);
     }
 }
+
+// const index = async (req, res, next) => {
+//     try {
+//       let { skip = 0, limit = 10, q = '', category = '', tags = [] } = req.query;
+  
+//       let pipeline = [
+//         { $match: {} } // Initial match stage (empty for now)
+//       ];
+  
+//       if (q.length) {
+//         pipeline.push({
+//           $match: {
+//             name: { $regex: `${q}`, $options: 'i' }
+//           }
+//         });
+//       }
+  
+//       if (category.length) {
+//         const categoryResult = await Category.findOne({ name: { $regex: `${category}`, $options: 'i' } });
+  
+//         if (categoryResult)   
+//    {
+//           pipeline.push({
+//             $match: {
+//               category: categoryResult._id
+//             }
+//           });
+//         }
+//       }
+  
+//       if (tags.length) {
+//         const tagsResult = await Tags.find({ name: { $in: tags } });
+  
+//         if (tagsResult.length) {
+//           pipeline.push({
+//             $match: {
+//               tags: { $in: tagsResult.map(tag => tag._id) }
+//             }
+//           });
+//         }
+//       }
+  
+//       // Add count stage after filtering
+//       pipeline.push({ $count: "totalProducts" });
+  
+//       // Add pagination stage (optional, can be combined with $match for efficiency)
+//       pipeline.push({ $skip: parseInt(skip) });
+//       pipeline.push({ $limit: parseInt(limit) });
+  
+//       const [countResult, products] = await Promise.all([
+//         Product.aggregate(pipeline),
+//         Product.find(pipeline[0]) // Use the first stage for filtering (adjust if needed)
+//           .skip(parseInt(skip))
+//           .limit(parseInt(limit))
+//           .populate('category')
+//           .populate('tags')
+//       ]);
+  
+//       const count = countResult.length ? countResult[0].totalProducts : 0;
+  
+//       return res.json({
+//         data: products,
+//         count
+//       });
+//     } catch (error) {
+//       next(error);
+//     }
+// }
 
 const indexbyId = async (req, res) => {
     const productId = req.params.id;

@@ -53,7 +53,7 @@ const update = async (req, res, next) => {
         return res.json(cartItems);
     } catch (err) {
         if(err && err.name === 'ValidationError'){
-            return res.json({
+            return res.status(400).json({
                 error: 1,
                 message: err.message,
                 fields: err.errors

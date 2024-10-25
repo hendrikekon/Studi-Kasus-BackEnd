@@ -37,9 +37,16 @@ const localStrategy = async (email, password, done) =>{
         .select('-__v -createdAt -updatedAt -cart_items -token');
         
         if(!user) return done(null, false, { message: 'Incorrect email or password' });
-        if(bcrypt.compareSync(password, user.password)){
-            ({password, ...userWithoutPassword} = user.toJSON());
+        // if(bcrypt.compareSync(password, user.password)){
+        //     ({password, ...userWithoutPassword} = user.toJSON());
+        //     return done(null, userWithoutPassword);
+        // }
+        const passwordMatch = bcrypt.compareSync(password, user.password);
+        if (passwordMatch) {
+            const { password, ...userWithoutPassword } = user.toJSON();
             return done(null, userWithoutPassword);
+        } else {
+            return done(null, false, { message: 'Incorrect email or password' });
         }
     }catch(err){
         done(err, null);
@@ -48,33 +55,46 @@ const localStrategy = async (email, password, done) =>{
 }
 
 const login  = async (req, res, next) => {
-    passport.authenticate('local', async function(err, user){
+    passport.authenticate('local', async function(err, user, info){
         if(err) return next(err);
-        if(!user) return res.json({error: 1, message: 'Email or Password is incorrect'});
-        let signed = jwt.sign(user, config.secretkey);
-        await User.findByIdAndUpdate(user._id, {$push: {token: signed}});
+        if(!user) return res.status(400).json({error: 1, message: info.message || 'Email or Password is incorrect'});
+        
+        try {
+            let signed = jwt.sign(user, config.secretkey);
+            await User.findByIdAndUpdate(user._id, {$push: {token: signed}});
 
-        res.json({
-            message: 'Login successful',
-            user,
-            token: signed
-        });
+            return res.status(200).json({
+                message: 'Login successful',
+                user,
+                token: signed
+            });
+        } catch (error) {
+            return next(err);
+        }
+        
     })(req, res, next);
 }
 
 const logout = async (req, res, next) => {
     let token = getToken(req);
+    
+    if(!token){
+        return res.status(400).json({
+            error: 1, 
+            message: 'Token not provided!!!'
+        });
+    }
 
     let user = await User.findOneAndUpdate({token: {$in: [token]}}, {$pull: {token: token}}, {useFindAndModify: false});
 
-    if(!token || !user){
-        return res.json({
-            error: 1, 
+    if (!user) {
+        return res.status(400).json({
+            error: 1,
             message: 'No User Found!!!'
         });
     }
 
-    return res.json({
+    return res.status(200).json({
         error: 0, 
         message: 'User Logged Out Successfully'
     })
